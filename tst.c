@@ -1,30 +1,35 @@
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
+#include <sys/stat.h>
 
 #define CAT_MAX 15		// максимум категорий
 #define KW_MAX 15		// максимум ключевых слов, включая имя файла, в категории
 #define VLEN_MAX 96			// максимальная длина строки 
 
-int stringsearch(const char *buf, const char *str, char *savestr);	// ищет в начале buf подстроку str, если есть, то все после '=' копирует в savestr
+// ищет в начале buf подстроку str, если есть, то все после '=' копирует в savestr
+int stringsearch(const char *buf, const char *str, char *savestr);
+// проверить наличие директории, если нет, то создать.
+int dircheck(const char *dirname);
 
 int main(int argc, char **argv)
 {
 	char *appdirs[] = { "/usr/share/applications", "/usr/local/share/applications", "/home/live/.local/share/applications", NULL };
-	char *categorykw[CAT_MAX][KW_MAX] =  { 
-		{ "/home/live/.jwm/menu/Desktop", "Desktop", "Screensaver", "Accessibility", NULL },
-		{ "/home/live/.jwm/menu/System",  "System",   "Monitor",        "Security",      "HardwareSettings", "Core", NULL },
-		{"/home/live/.jwm/menu/Setup", "Setup", "PackageManager", NULL},
-		{"/home/live/.jwm/menu/Utility", "Utility", "Viewer", "Development", "Building", "Debugger", "IDE", "Profiling", "Translation", "GUIDesigner", "Archiving","TerminalEmulator","Shell", NULL},
-		{"/home/live/.jwm/menu/Filesystem","File", NULL},
-		{"/home/live/.jwm/menu/Graphic","Graphic","Photography","Presentation","Chart", NULL},
-		{"/home/live/.jwm/menu/Office","Office","Document","WordProcessor","WebDevelopment","TextEditor","Dictionary", NULL},
-		{"/home/live/.jwm/menu/Calculate","Calculat","Finance","Spreadsheet","ProjectManagement", NULL},
-		{"/home/live/.jwm/menu/Personal","Personal","Calendar","ContactManagement", NULL},
-		{"/home/live/.jwm/menu/Network","Network","Dialup","HamRadio","RemoteAccess", NULL},
-		{"/home/live/.jwm/menu/Internet","Internet","WebBrowser","Email","News","InstantMessaging","Telephony","IRCClient","FileTransfer","P2P", NULL},
-		{"/home/live/.jwm/menu/Multimedia","Video","Player","Music","Audio","Midi","Mixer","Sequencer","Tuner","TV","DiskBurning", NULL},
-		{"/home/live/.jwm/menu/Game","Game","Amusement","RolePlaying","Simulation", NULL},
+	char *outdir = "/home/live/.jwm/menu";
+	char *categorykw[CAT_MAX][KW_MAX] =  {  // сначала имя файла, куда складываем, потом ключевые слова категории
+		{ "Desktop", "Desktop", "Screensaver", "Accessibility", NULL },
+		{ "System",  "System",   "Monitor",        "Security",      "HardwareSettings", "Core", NULL },
+		{"Setup", "Setup", "PackageManager", NULL},
+		{"Utility", "Utility", "Viewer", "Development", "Building", "Debugger", "IDE", "Profiling", "Translation", "GUIDesigner", "Archiving","TerminalEmulator","Shell", NULL},
+		{"Filesystem","File", NULL},
+		{"Graphic","Graphic","Photography","Presentation","Chart", NULL},
+		{"Office","Office","Document","WordProcessor","WebDevelopment","TextEditor","Dictionary", NULL},
+		{"Calculate","Calculat","Finance","Spreadsheet","ProjectManagement", NULL},
+		{"Personal","Personal","Calendar","ContactManagement", NULL},
+		{"Network","Network","Dialup","HamRadio","RemoteAccess", NULL},
+		{"Internet","Internet","WebBrowser","Email","News","InstantMessaging","Telephony","IRCClient","FileTransfer","P2P", NULL},
+		{"Multimedia","Video","Player","Music","Audio","Midi","Mixer","Sequencer","Tuner","TV","DiskBurning", NULL},
+		{"Game","Game","Amusement","RolePlaying","Simulation", NULL},
 		{ NULL }
 																		};  // массив имен файлов категорий и ключевых слов к ним
 	FILE *outfiles[CAT_MAX];    // массив файловых указателей категорий
@@ -34,15 +39,26 @@ int main(int argc, char **argv)
 	DIR *dir;
 	struct dirent *entry;
 	char buf[80];
+	char outfname[64];
 	char *lf;
 	int len, space;
 	char str[VLEN_MAX];
 	char namestr[VLEN_MAX], iconstr[VLEN_MAX], execstr[VLEN_MAX], categorystr[VLEN_MAX];
 	
+	if( ! dircheck(outdir) ) return 1;
+	outfname[0]=0;
+	strncat(outfname, outdir, sizeof(outfname) - 2 );
+	strcat(outfname, "/");
+	len = strlen(outfname);
+	space = sizeof(outfname) - len - 1;
 	for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
 		if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
-		outfiles[catIndex] = fopen(categorykw[catIndex][0], "w");
-		fprintf(outfiles[catIndex], "<JWM>\n");
+		outfname[len] = 0;			// убрали предыдущее имя файла
+		strncat(outfname, categorykw[catIndex][0], space);
+		if( (outfiles[catIndex] = fopen(outfname, "w")) != 0 )
+			fprintf(outfiles[catIndex], "<JWM>\n");
+		else
+			perror(outfname);
 	} // пооткрывали сразу все файлы, потом в конце таким же циклом надо закрыть
 	
 	for( appdir=appdirs; *appdir != NULL; appdir++){  // по всем каталогам с *.desktop файлами
@@ -69,6 +85,7 @@ int main(int argc, char **argv)
 					else if ( stringsearch(str, "Exec", execstr) != 0 ) continue;
 					else if ( stringsearch(str, "Categories", categorystr) != 0 ) continue;
 				}  // разобрали *.desktop файл
+				fclose(fp);
 				for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
 					if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
 					for( wordIndex=1; wordIndex<KW_MAX; wordIndex++ ){     // по всем ключевым словам категории
@@ -100,4 +117,25 @@ int stringsearch(const char *buf, const char *str, char *savestr){	// ищет �
 		return 1;
 	}
 	return 0;
+}
+
+// проверить наличие директории, если нет, то создать.
+int dircheck(const char *dirname){
+	DIR *dir;
+	char dncopy[64];
+	
+	if( (dir = opendir(dirname)) != 0 ){
+		closedir(dir);						//нормально открылась - закрыть и ничего не делать
+		return 1;
+	}else{										// не открылась - проверить, есть ли предшествующая, а потом создать
+		strncpy(dncopy, dirname, sizeof(dncopy) - 1);
+		dncopy[sizeof(dncopy) - 1] = 0;
+		*(strrchr(dncopy, '/')) = 0;	//  подрезали имя по последний слеш
+		if( ! dircheck(dncopy) ) return 0; // предшествующую создать не получилось
+		if( mkdir(dirname, 0755) == -1 ){
+			perror(dirname);				// не получилось создать
+			return 0;
+		}
+		return 1;
+	}
 }
