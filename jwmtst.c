@@ -143,11 +143,19 @@ int parsefile(const char *filename, dtentryT *rezult){
 
 	fp=fopen(filename,"r");
 	if( fp == NULL ){ perror(filename); return 0; }
-	memset( rezult, 0, sizeof(dtentryT) );
+	memset( rezult, 0, sizeof(dtentryT) );		// изначально все пустое
 	while(!feof(fp)) {
 		fgets(str,sizeof(str),fp);
 		if ( (tp=strchr(str, '\n'))!=0 ) *tp=0;
-		if ( stringsearch(str, "Name=", &(rezult->name) ) != 0 ) continue;
+		if ( (stringsearch(str, "OnlyShowIn", &tmpstr ) != 0) && ( strstr( tmpstr, "JWM") == 0) ){	// если файл не для JWM
+			if( rezult->name ) free( rezult->name );
+			if( rezult->icon ) free( rezult->icon );		// освободить все найденное
+			if( rezult->exec ) free( rezult->exec );
+			if( rezult->categories ) free( rezult->categories );
+			free(tmpstr);
+			return 0;				// и выдать неуспешный статус
+		}
+		else if ( stringsearch(str, "Name=", &(rezult->name) ) != 0 ) continue;
 		else if ( stringsearch(str, "Name[ru]", &tmpstr ) != 0 ){  // будет работать если Name[ru] в файле после Name=
 					 if( rezult->name ) free( rezult->name );   // если уже было чего-то, освободить память.
 					 rezult->name = tmpstr;
