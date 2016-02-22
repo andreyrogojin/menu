@@ -9,7 +9,7 @@
 #define KW_MAX 17		// максимум ключевых слов, включая название и иконку, в категории
 #define FILE_IN_CAT_MAX 50	// максимум пунктов меню в категории
 #define DTENTRY_MAX 300		// максимум desktop файлов на входе
-#define VLEN_MAX 80			// максимальная длина строки в desktop файле
+#define VLEN_MAX 100			// максимальная длина строки в desktop файле
 
 typedef struct {
 	char *name;
@@ -106,12 +106,14 @@ int main(int argc, char **argv)
 	printf("<JWM>\n");
 	for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
 		if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
-		printf("<Menu label=\"%s\" icon=\"%s\">\n", categorykw[catIndex][0], categorykw[catIndex][1]);
-		for(entryIndex=0; entryIndex < catend[catIndex]; entryIndex++){
-			printf("\t<Program label=\"%s\" icon=\"%s\">%s</Program>\n", \
-					catentry[catIndex][entryIndex]->name, catentry[catIndex][entryIndex]->icon, catentry[catIndex][entryIndex]->exec);
+		if( catend[catIndex] != 0 ){		// Вывод <Menu>, только если категория не пустая DdShurick 
+			printf("<Menu label=\"%s\" icon=\"%s\">\n", categorykw[catIndex][0], categorykw[catIndex][1]);
+			for(entryIndex=0; entryIndex < catend[catIndex]; entryIndex++){
+				printf("\t<Program label=\"%s\" icon=\"%s\">%s</Program>\n", \
+						catentry[catIndex][entryIndex]->name, catentry[catIndex][entryIndex]->icon, catentry[catIndex][entryIndex]->exec);
+			}
+			printf("</Menu>\n");
 		}
-		printf("</Menu>\n");
 		free(catentry[catIndex]);
 	} // вывели категории и освободили память массива категории
 	printf("</JWM>\n");
@@ -147,7 +149,7 @@ int parsefile(const char *filename, dtentryT *rezult){
 	while(!feof(fp)) {
 		fgets(str,sizeof(str),fp);
 		if ( (tp=strchr(str, '\n'))!=0 ) *tp=0;
-		if ( (stringsearch(str, "OnlyShowIn", &tmpstr ) != 0) && ( strstr( tmpstr, "JWM") == 0) ){	// если файл не для JWM
+		if ( (stringsearch(str, "OnlyShowIn", &tmpstr ) != 0) && ( strstr( tmpstr, "Old") == 0) ){	// если файл не для JWM
 			if( rezult->name ) free( rezult->name );
 			if( rezult->icon ) free( rezult->icon );		// освободить все найденное
 			if( rezult->exec ) free( rezult->exec );
