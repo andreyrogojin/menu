@@ -9,7 +9,7 @@
 #define KW_MAX 17		// максимум ключевых слов, включая название и иконку, в категории
 #define FILE_IN_CAT_MAX 50	// максимум пунктов меню в категории
 #define DTENTRY_MAX 300		// максимум desktop файлов на входе
-#define VLEN_MAX 80			// максимальная длина строки в desktop файле
+#define VLEN_MAX 100			// максимальная длина строки в desktop файле
 
 typedef struct {
 	char *name;
