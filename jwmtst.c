@@ -138,21 +138,28 @@ int stringsearch(const char *buf, const char *str, char **savestr){
 int parsefile(const char *filename, dtentryT *rezult){
 	FILE *fp;
 	char str[VLEN_MAX];
-	char *lf;
-	char *namestr;
+	char *tp;
+	char *tmpstr;
 
 	fp=fopen(filename,"r");
 	if( fp == NULL ){ perror(filename); return 0; }
 	memset( rezult, 0, sizeof(dtentryT) );
 	while(!feof(fp)) {
 		fgets(str,sizeof(str),fp);
-		if ( (lf=strchr(str, '\n'))!=0 ) *lf=0;
+		if ( (tp=strchr(str, '\n'))!=0 ) *tp=0;
 		if ( stringsearch(str, "Name=", &(rezult->name) ) != 0 ) continue;
-		else if ( stringsearch(str, "Name[ru]", &namestr ) != 0 ){  // будет работать если Name[ru] в файле после Name=
+		else if ( stringsearch(str, "Name[ru]", &tmpstr ) != 0 ){  // будет работать если Name[ru] в файле после Name=
 					 if( rezult->name ) free( rezult->name );   // если уже было чего-то, освободить память.
-					 rezult->name = namestr;
+					 rezult->name = tmpstr;
 					 continue; }
-		else if ( stringsearch(str, "Icon", &(rezult->icon) ) != 0 ) continue;
+		else if ( stringsearch(str, "Icon", &(rezult->icon) ) != 0 ){ 
+					if ( (tp=strrchr(rezult->icon, '/')) != 0 ){
+						tmpstr = strndup(tp+1, VLEN_MAX);
+						free(rezult->icon);	// если иконка была с путем, вырезать только имя файла, старую строчку освободить
+						rezult->icon = tmpstr;
+					}
+					if ( (tp=strrchr(rezult->icon, '.')) != 0 ) *tp=0;	// если с расширением, то его тоже отрезать
+					continue; }
 		else if ( stringsearch(str, "Exec", &(rezult->exec) ) != 0 ) continue;
 		else 	  stringsearch(str, "Categories", &(rezult->categories) );
 	}  // разобрали *.desktop файл
