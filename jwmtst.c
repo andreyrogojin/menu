@@ -5,11 +5,11 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-#define CAT_MAX 10		// максимум категорий
-#define KW_MAX 16		// максимум ключевых слов, включая название и иконку, в категории
+#define CAT_MAX 12		// максимум категорий
+#define KW_MAX 17		// максимум ключевых слов, включая название и иконку, в категории
 #define FILE_IN_CAT_MAX 50	// максимум пунктов меню в категории
 #define DTENTRY_MAX 300		// максимум desktop файлов на входе
-#define VLEN_MAX 96			// максимальная длина строки в desktop файле
+#define VLEN_MAX 80			// максимальная длина строки в desktop файле
 
 typedef struct {
 	char *name;
@@ -71,11 +71,11 @@ int main(int argc, char **argv)
 				if (strstr(entry->d_name,".desktop")==0 ) continue;  // если не *.desktop, этот файл пропускаем
 				buf[len]=0;
 				strncat(buf,entry->d_name, space);
-				entryIndex += parsefile( buf, dtentry + entryIndex);	// разобрали файл, если успешно, заполнять будем следующую ячейку массива
-				if( entryIndex == DTENTRY_MAX ){
+				if( entryIndex == DTENTRY_MAX ){		// проверка, есть ли куда записывать разобранный файл
 					fprintf(stderr, "Too many desktop files\n");
 					return 1;  // не помещаются все файлы, аварийный выход
 				}
+				entryIndex += parsefile( buf, dtentry + entryIndex);	// разобрали файл, если успешно, заполнять будем следующую ячейку массива
 			} /* while readdir */
 			closedir(dir);
 		} /* if(dir) */
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
 int stringsearch(const char *buf, const char *str, char **savestr){
 	char *tp;
 	if( strncmp( buf, str, strlen(str) ) == 0 && (tp=strchr(buf, '='))){
-		*savestr = strndup(tp+1, 64);
+		*savestr = strndup(tp+1, VLEN_MAX);
 		return 1;
 	}
 	return 0;
