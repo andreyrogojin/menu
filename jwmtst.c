@@ -5,8 +5,8 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-#define CAT_MAX 12		// максимум категорий
-#define KW_MAX 17		// максимум ключевых слов, включая название и иконку, в категории
+#define CAT_MAX 15		// максимум категорий
+#define KW_MAX 17		// максимум ключевых слов, включая название, иконку и размер, в категории
 #define FILE_IN_CAT_MAX 50	// максимум пунктов меню в категории
 #define DTENTRY_MAX 300		// максимум desktop файлов на входе
 #define VLEN_MAX 100			// максимальная длина строки в desktop файле
@@ -29,17 +29,17 @@ int main(int argc, char **argv)
 {
 	char *appdirs[] = { "/usr/share/applications", "/usr/local/share/applications", "/home/live/.local/share/applications", NULL };
 	
-	char *categorykw[CAT_MAX][KW_MAX] =  {  // сначала имя категории, потом иконка, потом ключевые слова категории
-		{"Настройки", "preferences-desktop", "Settings","DesktopSettings","HardwareSettings","Setup","PackageManager","Desktop","Screensaver","Accessibility", NULL },
-		{"________", NULL },
-		{"Графика", "applications-graphics", "Graphic","Photography","Presentation","Chart", NULL},
-		{"Игры", "applications-games", "Game","Amusement","RolePlaying","Simulation", NULL},
-		{"Интернет", "applications-internet", "Internet","WebBrowser","Email","News","InstantMessaging","Telephony","IRCClient","FileTransfer","P2P","Network","Dialup","HamRadio","RemoteAccess", NULL},
-		{"Инструменты", "applications-accessories", "Utility","Viewer","Profiling","Translation","GUIDesigner","Archiving","TerminalEmulator","Shell","File", NULL},
-		{"Мультимедиа", "applications-multimedia", "Video","Player","Music","Audio","Midi","Mixer","Sequencer","Tuner","TV","DiskBurning", NULL},
-		{"Офис", "applications-office", "Office","Document","WordProcessor","WebDevelopment","TextEditor","Dictionary","Calculat","Finance","Spreadsheet","ProjectManagement","Personal", "Calendar","ContactManagement", NULL},
-		{"Разработка", "applications-development", "Development","Building","Debugger","IDE", NULL},
-		{"Система", "applications-system", "System","Monitor","Security","Core", NULL },
+	char *categorykw[CAT_MAX][KW_MAX] =  {  // сначала имя категории, потом иконка, высота меню, потом ключевые слова категории
+		{"Настройки", "preferences-desktop", "18", "Settings","DesktopSettings","HardwareSettings","Setup","PackageManager","Desktop","Screensaver","Accessibility", NULL },
+		{"________", },
+		{"Графика", "applications-graphics", "18", "Graphic","Photography","Presentation","Chart", NULL},
+		{"Игры", "applications-games", "18", "Game","Amusement","RolePlaying","Simulation", NULL},
+		{"Интернет", "applications-internet", "18", "Internet","WebBrowser","Email","News","InstantMessaging","Telephony","IRCClient","FileTransfer","P2P","Network","Dialup","HamRadio","RemoteAccess", NULL},
+		{"Инструменты", "applications-accessories", "18", "Utility","Viewer","Profiling","Translation","GUIDesigner","Archiving","TerminalEmulator","Shell","File", NULL},
+		{"Мультимедиа", "applications-multimedia", "18", "Video","Player","Music","Audio","Midi","Mixer","Sequencer","Tuner","TV","DiskBurning", NULL},
+		{"Офис", "applications-office", "18", "Office","Document","WordProcessor","WebDevelopment","TextEditor","Dictionary","Calculat","Finance","Spreadsheet","ProjectManagement","Personal", "Calendar","ContactManagement", NULL},
+		{"Разработка", "applications-development", "18", "Development","Building","Debugger","IDE", NULL},
+		{"Система", "applications-system", "18", "System","Monitor","Security","Core", NULL },
 		{ NULL }
 																		};  // массив категорий и ключевых слов к ним
 	int catIndex, wordIndex;
@@ -56,6 +56,7 @@ int main(int argc, char **argv)
 	
 	for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
 		if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
+		if( categorykw[catIndex][0][0] == '_' ) continue; // это сепаратор, пропускаем
 		catentry[catIndex] = calloc(FILE_IN_CAT_MAX, sizeof(dtentryT*) );
 		catend[catIndex] = 0;  // пока там пусто
 	} // распределили память под массивы категорий
@@ -89,7 +90,7 @@ int main(int argc, char **argv)
 		for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
 			if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
 			if( categorykw[catIndex][0][0] == '_' ) continue; // это сепаратор, пропускаем
-			for( wordIndex=2; wordIndex<KW_MAX; wordIndex++ ){     // по всем ключевым словам категории
+			for( wordIndex=3; wordIndex<KW_MAX; wordIndex++ ){     // по всем ключевым словам категории
 				if( categorykw[catIndex][wordIndex] == NULL ) break;         // ключевые слова закончились, выходим из их перебора
 				if ( strstr( dtentry[entryIndex].categories, categorykw[catIndex][wordIndex] ) ){
 					// если категория нашлась, записали адрес ячейки в соотвествующий массив, если там место не кончилось
@@ -108,18 +109,17 @@ int main(int argc, char **argv)
 	printf("<JWM>\n");
 	for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
 		if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
-		if( categorykw[catIndex][0][0] == '_' ) printf("<Separator/>\n");	// если имя категории начинается с подчеркивания, это сепаратор
+		if( categorykw[catIndex][0][0] == '_' ){ printf("<Separator/>\n"); continue; }	// если имя категории начинается с подчеркивания, это сепаратор
 		if( catend[catIndex] != 0 ){		// Вывод <Menu>, только если категория не пустая DdShurick
-			printf("<Menu label=\"%s\" icon=\"%s\">\n", categorykw[catIndex][0], categorykw[catIndex][1]);
+			printf("<Menu label=\"%s\" icon=\"%s\" height=\"%s\">\n", categorykw[catIndex][0], categorykw[catIndex][1], categorykw[catIndex][2]);
 			for(entryIndex=0; entryIndex < catend[catIndex]; entryIndex++){
 				printf("\t<Program label=\"%s\" icon=\"%s\">%s</Program>\n", \
 						catentry[catIndex][entryIndex]->name, catentry[catIndex][entryIndex]->icon, catentry[catIndex][entryIndex]->exec);
 			}
 			printf("</Menu>\n");
-			
 		}
 		free(catentry[catIndex]);
-	} // вывели категории и освободили память массива категории
+	} // вывели категории и освободили память массивов категорий
 	printf("</JWM>\n");
 	for( entryIndex = 0; entryIndex < entryIndexMax; entryIndex++ ){
 		free(dtentry[entryIndex].name);	// освободили созданные strdup строки
