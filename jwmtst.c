@@ -30,15 +30,16 @@ int main(int argc, char **argv)
 	char *appdirs[] = { "/usr/share/applications", "/usr/local/share/applications", "/home/live/.local/share/applications", NULL };
 	
 	char *categorykw[CAT_MAX][KW_MAX] =  {  // сначала имя категории, потом иконка, потом ключевые слова категории
-		{"Система", "applications-system", "System","Monitor","Security","Core", NULL },
 		{"Настройки", "preferences-desktop", "Settings","DesktopSettings","HardwareSettings","Setup","PackageManager","Desktop","Screensaver","Accessibility", NULL },
-		{"Инструменты", "applications-accessories", "Utility","Viewer","Profiling","Translation","GUIDesigner","Archiving","TerminalEmulator","Shell","File", NULL},
-		{"Разработка", "applications-development", "Development","Building","Debugger","IDE", NULL},
+		{"________", NULL },
 		{"Графика", "applications-graphics", "Graphic","Photography","Presentation","Chart", NULL},
-		{"Офис", "applications-office", "Office","Document","WordProcessor","WebDevelopment","TextEditor","Dictionary","Calculat","Finance","Spreadsheet","ProjectManagement","Personal", "Calendar","ContactManagement", NULL},
-		{"Интернет", "applications-internet", "Internet","WebBrowser","Email","News","InstantMessaging","Telephony","IRCClient","FileTransfer","P2P","Network","Dialup","HamRadio","RemoteAccess", NULL},
-		{"Мультимедиа", "applications-multimedia", "Video","Player","Music","Audio","Midi","Mixer","Sequencer","Tuner","TV","DiskBurning", NULL},
 		{"Игры", "applications-games", "Game","Amusement","RolePlaying","Simulation", NULL},
+		{"Интернет", "applications-internet", "Internet","WebBrowser","Email","News","InstantMessaging","Telephony","IRCClient","FileTransfer","P2P","Network","Dialup","HamRadio","RemoteAccess", NULL},
+		{"Инструменты", "applications-accessories", "Utility","Viewer","Profiling","Translation","GUIDesigner","Archiving","TerminalEmulator","Shell","File", NULL},
+		{"Мультимедиа", "applications-multimedia", "Video","Player","Music","Audio","Midi","Mixer","Sequencer","Tuner","TV","DiskBurning", NULL},
+		{"Офис", "applications-office", "Office","Document","WordProcessor","WebDevelopment","TextEditor","Dictionary","Calculat","Finance","Spreadsheet","ProjectManagement","Personal", "Calendar","ContactManagement", NULL},
+		{"Разработка", "applications-development", "Development","Building","Debugger","IDE", NULL},
+		{"Система", "applications-system", "System","Monitor","Security","Core", NULL },
 		{ NULL }
 																		};  // массив категорий и ключевых слов к ним
 	int catIndex, wordIndex;
@@ -87,7 +88,8 @@ int main(int argc, char **argv)
 	for( entryIndex = 0; entryIndex < entryIndexMax; entryIndex++ ){  // Раскидываем сортированные данные по категориям
 		for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
 			if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
-			for( wordIndex=1; wordIndex<KW_MAX; wordIndex++ ){     // по всем ключевым словам категории
+			if( categorykw[catIndex][0][0] == '_' ) continue; // это сепаратор, пропускаем
+			for( wordIndex=2; wordIndex<KW_MAX; wordIndex++ ){     // по всем ключевым словам категории
 				if( categorykw[catIndex][wordIndex] == NULL ) break;         // ключевые слова закончились, выходим из их перебора
 				if ( strstr( dtentry[entryIndex].categories, categorykw[catIndex][wordIndex] ) ){
 					// если категория нашлась, записали адрес ячейки в соотвествующий массив, если там место не кончилось
@@ -106,13 +108,15 @@ int main(int argc, char **argv)
 	printf("<JWM>\n");
 	for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
 		if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
-		if( catend[catIndex] != 0 ){		// Вывод <Menu>, только если категория не пустая DdShurick 
+		if( categorykw[catIndex][0][0] == '_' ) printf("<Separator/>\n");	// если имя категории начинается с подчеркивания, это сепаратор
+		if( catend[catIndex] != 0 ){		// Вывод <Menu>, только если категория не пустая DdShurick
 			printf("<Menu label=\"%s\" icon=\"%s\">\n", categorykw[catIndex][0], categorykw[catIndex][1]);
 			for(entryIndex=0; entryIndex < catend[catIndex]; entryIndex++){
 				printf("\t<Program label=\"%s\" icon=\"%s\">%s</Program>\n", \
 						catentry[catIndex][entryIndex]->name, catentry[catIndex][entryIndex]->icon, catentry[catIndex][entryIndex]->exec);
 			}
 			printf("</Menu>\n");
+			
 		}
 		free(catentry[catIndex]);
 	} // вывели категории и освободили память массива категории
@@ -149,7 +153,8 @@ int parsefile(const char *filename, dtentryT *rezult){
 	while(!feof(fp)) {
 		fgets(str,sizeof(str),fp);
 		if ( (tp=strchr(str, '\n'))!=0 ) *tp=0;
-		if ( (stringsearch(str, "OnlyShowIn", &tmpstr ) != 0) && ( strstr( tmpstr, "Old") == 0) ){	// если файл не для JWM
+		if ( ( (stringsearch(str, "OnlyShowIn", &tmpstr ) != 0) && ( strstr( tmpstr, "Old") == 0) ) \
+				|| ( (stringsearch(str, "NoDisplay", &tmpstr ) != 0) && ( strstr( tmpstr, "false") == 0) ) ){	// если файл не для JWM или под NoDisplay, пропустить
 			if( rezult->name ) free( rezult->name );
 			if( rezult->icon ) free( rezult->icon );		// освободить все найденное
 			if( rezult->exec ) free( rezult->exec );
