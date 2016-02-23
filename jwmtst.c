@@ -146,6 +146,7 @@ int parsefile(const char *filename, dtentryT *rezult){
 	char str[VLEN_MAX];
 	char *tp;
 	char *tmpstr;
+	int nameru_found=0;	// флажок
 
 	fp=fopen(filename,"r");
 	if( fp == NULL ){ perror(filename); return 0; }
@@ -153,6 +154,7 @@ int parsefile(const char *filename, dtentryT *rezult){
 	while(!feof(fp)) {
 		fgets(str,sizeof(str),fp);
 		if ( (tp=strchr(str, '\n'))!=0 ) *tp=0;
+		if ( (str[0] == '[') && (strncmp( str, "[Desktop Entry]", sizeof("[Desktop Entry]")-1 ) != 0) ) break;	// если пошла уже другая секция, дальше не смотрим
 		if ( ( (stringsearch(str, "OnlyShowIn", &tmpstr ) != 0) && ( strstr( tmpstr, "Old") == 0) ) \
 				|| ( (stringsearch(str, "NoDisplay", &tmpstr ) != 0) && ( strstr( tmpstr, "false") == 0) ) ){	// если файл не для JWM или под NoDisplay, пропустить
 			if( rezult->name ) free( rezult->name );
@@ -162,21 +164,21 @@ int parsefile(const char *filename, dtentryT *rezult){
 			free(tmpstr);
 			return 0;				// и выдать неуспешный статус
 		}
-		else if ( stringsearch(str, "Name=", &(rezult->name) ) != 0 ) continue;
-		else if ( stringsearch(str, "Name[ru]", &tmpstr ) != 0 ){  // будет работать если Name[ru] в файле после Name=
-					 if( rezult->name ) free( rezult->name );   // если уже было чего-то, освободить память.
-					 rezult->name = tmpstr;
-					 continue; }
-		else if ( stringsearch(str, "Icon", &(rezult->icon) ) != 0 ){ 
-					if ( (tp=strrchr(rezult->icon, '/')) != 0 ){
-						tmpstr = strndup(tp+1, VLEN_MAX);
-						free(rezult->icon);	// если иконка была с путем, вырезать только имя файла, старую строчку освободить
-						rezult->icon = tmpstr;
-					}
-					if ( (tp=strrchr(rezult->icon, '.')) != 0 ) *tp=0;	// если с расширением, то его тоже отрезать
-					continue; }
-		else if ( stringsearch(str, "Exec", &(rezult->exec) ) != 0 ) continue;
-		else 	  stringsearch(str, "Categories", &(rezult->categories) );
+		if ( ! nameru_found ) if ( stringsearch(str, "Name=", &(rezult->name) ) != 0 ) continue; 
+		if ( stringsearch(str, "Name[ru]", &tmpstr ) != 0 ){
+			if( rezult->name ) free( rezult->name );   // если уже было чего-то, освободить память.
+			rezult->name = tmpstr;
+			nameru_found = 1; // если нашлось Name[ru], то просто Name= искать уже не надо
+			continue; }
+		if ( stringsearch(str, "Icon", &(rezult->icon) ) != 0 ){ 
+			if ( (tp=strrchr(rezult->icon, '/')) != 0 ){
+				tmpstr = strndup(tp+1, VLEN_MAX);
+				free(rezult->icon);	// если иконка была с путем, вырезать только имя файла, старую строчку освободить
+				rezult->icon = tmpstr;	}
+			if ( (tp=strrchr(rezult->icon, '.')) != 0 ) *tp=0;	// если с расширением, то его тоже отрезать
+			continue; }
+		if ( stringsearch(str, "Exec", &(rezult->exec) ) != 0 ) continue;
+		stringsearch(str, "Categories", &(rezult->categories) );
 	}  // разобрали *.desktop файл
 	fclose(fp);
 	if( rezult->name && rezult->exec && rezult->categories  ) return 1;	// необходимые поля заполнены
