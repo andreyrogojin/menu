@@ -18,31 +18,21 @@ typedef struct {
 	char *categories;
 } dtentryT;
 
+char *categorykw[CAT_MAX][KW_MAX];		// сначала имя категории, потом иконка, высота меню, потом ключевые слова категории
+int catIndex, wordIndex;
+
 // ищет в начале buf подстроку str, если есть, то все после '=' копирует в динамически выделенную память, адрес помещает в savestr
 int stringsearch(const char *buf, const char *str, char **savestr);
 // разобрать desktop файл, поместить в структуру взятые из него name, icon, exec,  categories
 int parsefile(const char *filename, dtentryT *rezult);
+// разобрать конфиг файл, результаты разложить в глобальный массив
+int parseconfig(const char *filename);
 // функция для сортировки по именам
 int compar(const void *a, const void *b);
 
 int main(int argc, char **argv)
 {
 	char *appdirs[] = { "/usr/share/applications", "/usr/local/share/applications", "/home/live/.local/share/applications", NULL };
-	
-	char *categorykw[CAT_MAX][KW_MAX] =  {  // сначала имя категории, потом иконка, высота меню, потом ключевые слова категории
-		{"Настройки", "preferences-desktop", "18", "Settings","DesktopSettings","HardwareSettings","Setup","PackageManager","Desktop","Screensaver","Accessibility", NULL },
-		{"________", },
-		{"Графика", "applications-graphics", "18", "Graphic","Photography","Presentation","Chart", NULL},
-		{"Игры", "applications-games", "18", "Game","Amusement","RolePlaying","Simulation", NULL},
-		{"Интернет", "applications-internet", "18", "Internet","WebBrowser","Email","News","InstantMessaging","Telephony","IRCClient","FileTransfer","P2P","Network","Dialup","HamRadio","RemoteAccess", NULL},
-		{"Инструменты", "applications-accessories", "18", "Utility","Viewer","Profiling","Translation","GUIDesigner","Archiving","TerminalEmulator","Shell","File", NULL},
-		{"Мультимедиа", "applications-multimedia", "18", "Video","Player","Music","Audio","Midi","Mixer","Sequencer","Tuner","TV","DiskBurning", NULL},
-		{"Офис", "applications-office", "18", "Office","Document","WordProcessor","WebDevelopment","TextEditor","Dictionary","Calculat","Finance","Spreadsheet","ProjectManagement","Personal", "Calendar","ContactManagement", NULL},
-		{"Разработка", "applications-development", "18", "Development","Building","Debugger","IDE", NULL},
-		{"Система", "applications-system", "18", "System","Monitor","Security","Core", NULL },
-		{ NULL }
-																		};  // массив категорий и ключевых слов к ним
-	int catIndex, wordIndex;
 	char **appdir;
 	DIR *dir;
 	struct dirent *entry;
@@ -53,6 +43,8 @@ int main(int argc, char **argv)
 	int catend[CAT_MAX];  // индекс конца каждого из массивов
 	int entryIndex=0;
 	int entryIndexMax;
+	
+	if( !parseconfig("/home/live/.jwm/jwmtst.conf") ) return 1;	// без конфига делать нечего
 	
 	for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
 		if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
@@ -184,6 +176,36 @@ int parsefile(const char *filename, dtentryT *rezult){
 	if( rezult->name && rezult->exec && rezult->categories  ) return 1;	// необходимые поля заполнены
 	else return 0;	// нет нужной информации
 }
+
+int parseconfig(const char *filename){
+	FILE *fp;
+	char str[VLEN_MAX], *tp, *tmpstr;
+	
+	fp=fopen(filename,"r");
+	if( fp == NULL ){ perror(filename); return 0; }
+	catIndex = -1;
+	while( !feof(fp) ){
+		fgets(str,sizeof(str), fp);
+		if ( (tp=strchr(str, '\n'))!=0 ) *tp=0;
+		if ( stringsearch(str, "Name=", &tmpstr ) ){ categorykw[++catIndex][0] = tmpstr; wordIndex=3; continue; }
+		if ( stringsearch(str, "Icon=", &categorykw[catIndex][1] ) ){ continue; }
+		if ( stringsearch(str, "Height=", &categorykw[catIndex][2] ) ){ continue; }
+		if ( stringsearch(str, "Categories=", &tmpstr ) ){
+			categorykw[catIndex][wordIndex] = tmpstr;
+			while( (tp=strchr(categorykw[catIndex][wordIndex], ';')) ){
+				*tp=0;
+				if( *(tp+1) != 0 )	categorykw[catIndex][++wordIndex] = tp+1;
+				else{ categorykw[catIndex][++wordIndex] = NULL; break; }
+			}
+			continue;
+		}
+	}
+	fclose(fp);
+	categorykw[++catIndex][0] = NULL;
+	if( catIndex == 0) return 0;	// нет ни одной категории в конфиге
+	return 1;
+}
+
 
 int compar(const void *a, const void *b){
 	dtentryT *la = (dtentryT*)a;
