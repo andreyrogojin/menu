@@ -9,7 +9,7 @@
 #define KW_MAX 17		// максимум ключевых слов, включая название, иконку и размер, в категории
 #define FILE_IN_CAT_MAX 50	// максимум пунктов меню в категории
 #define DTENTRY_MAX 300		// максимум desktop файлов на входе
-#define VLEN_MAX 100			// максимальная длина строки в desktop файле
+#define VLEN_MAX 200			// максимальная длина строки в desktop файле
 
 typedef struct {
 	char *name;
@@ -110,6 +110,10 @@ int main(int argc, char **argv)
 			}
 			printf("</Menu>\n");
 		}
+		for( wordIndex=0; wordIndex<4; wordIndex++ ){
+			if( categorykw[catIndex][wordIndex] == NULL ) break;
+			free( categorykw[catIndex][wordIndex] );	// таблица больше не используется, можно освободить память
+		}			// не забываем, что под слова, начиная с 3, память выделяли одним блоком
 		free(catentry[catIndex]);
 	} // вывели категории и освободили память массивов категорий
 	printf("</JWM>\n");
