@@ -189,6 +189,10 @@ int parseconfig(const char *filename){
 	if( fp == NULL ){ perror(filename); return 0; }
 	catIndex = -1;
 	while( !feof(fp) ){
+		if( catIndex == CAT_MAX ){
+			fprintf(stderr, "Count \"Name=\" > CAT_MAX in config file\n");
+			return 0;		// слишком много категорий в конфиге, не влезли
+		}
 		fgets(str,sizeof(str), fp);
 		if ( (tp=strchr(str, '\n'))!=0 ) *tp=0;
 		if ( stringsearch(str, "Name=", &tmpstr ) ){ categorykw[++catIndex][0] = tmpstr; wordIndex=3; continue; }
@@ -202,6 +206,10 @@ int parseconfig(const char *filename){
 				free(tmpstr);
 			}else categorykw[catIndex][wordIndex] = tmpstr;
 			while( (tp=strchr(categorykw[catIndex][wordIndex], ';')) ){
+				if( wordIndex == KW_MAX ){
+					fprintf(stderr, "Count word in \"Categories=\" > KW_MAX in config file\n");
+					return 0;		// слишком много слов в категории, не влезли
+				}
 				*tp=0;
 				tp++;
 				while( (*tp == ' ') || (*tp == '\t') ) tp++;		// пробелы/табуляции пропустить
