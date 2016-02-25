@@ -195,10 +195,17 @@ int parseconfig(const char *filename){
 		if ( stringsearch(str, "Icon=", &categorykw[catIndex][1] ) ){ continue; }
 		if ( stringsearch(str, "Height=", &categorykw[catIndex][2] ) ){ continue; }
 		if ( stringsearch(str, "Categories=", &tmpstr ) ){
-			categorykw[catIndex][wordIndex] = tmpstr;
+			tp = tmpstr;
+			while( (*tp == ' ') || (*tp == '\t') ) tp++;		// пробелы/табуляции пропустить
+			if( tp != tmpstr ){
+				categorykw[catIndex][wordIndex] = strdup(tp);
+				free(tmpstr);
+			}else categorykw[catIndex][wordIndex] = tmpstr;
 			while( (tp=strchr(categorykw[catIndex][wordIndex], ';')) ){
 				*tp=0;
-				if( *(tp+1) != 0 )	categorykw[catIndex][++wordIndex] = tp+1;
+				tp++;
+				while( (*tp == ' ') || (*tp == '\t') ) tp++;		// пробелы/табуляции пропустить
+				if( *tp != 0 )	categorykw[catIndex][++wordIndex] = tp;
 				else{ categorykw[catIndex][++wordIndex] = NULL; break; }
 			}
 			continue;
