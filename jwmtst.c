@@ -39,20 +39,12 @@ int main(int argc, char **argv)
 	char buf[80];
 	int len, space;
 	dtentryT dtentry[DTENTRY_MAX];
-	dtentryT **catentry[CAT_MAX]; // здесь будут указатели на массивы, каждый для своей категории. В массивах указатели на разобранные файлы.
-	int catend[CAT_MAX];  // индекс конца каждого из массивов
 	int entryIndex=0;
 	int entryIndexMax;
-	
+	int menuopen = 0;
+
 	if( !parseconfig("/home/live/.jwm/jwmtst.conf") ) return 1;	// без конфига делать нечего
-	
-	for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
-		if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
-		if( categorykw[catIndex][0][0] == '_' ) continue; // это сепаратор, пропускаем
-		catentry[catIndex] = calloc(FILE_IN_CAT_MAX, sizeof(dtentryT*) );
-		catend[catIndex] = 0;  // пока там пусто
-	} // распределили память под массивы категорий
-	
+
 	for( appdir=appdirs; *appdir != NULL; appdir++){  // по всем каталогам с *.desktop файлами
 		dir = opendir(*appdir);
 		if(dir){
@@ -75,48 +67,36 @@ int main(int argc, char **argv)
 		} /* if(dir) */
 	} // по всем каталогам с *.desktop файлами
 	entryIndexMax = entryIndex; // запомнили, до какого индекса массив заполнен
-	
+
 	qsort(dtentry, entryIndexMax, sizeof(dtentryT) , compar );  // рассортировали, то что выбрали из файлов
 
-	for( entryIndex = 0; entryIndex < entryIndexMax; entryIndex++ ){  // Раскидываем сортированные данные по категориям
-		for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
-			if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
-			if( categorykw[catIndex][0][0] == '_' ) continue; // это сепаратор, пропускаем
-			for( wordIndex=3; wordIndex<KW_MAX; wordIndex++ ){     // по всем ключевым словам категории
-				if( categorykw[catIndex][wordIndex] == NULL ) break;         // ключевые слова закончились, выходим из их перебора
-				if ( strstr( dtentry[entryIndex].categories, categorykw[catIndex][wordIndex] ) ){
-					// если категория нашлась, записали адрес ячейки в соотвествующий массив, если там место не кончилось
-					if( catend[catIndex] == FILE_IN_CAT_MAX ){
-						fprintf(stderr, "Too many entries in category:%s\n", categorykw[catIndex][0]);
-						break;  // не помещаются все ссылки в категорию, придется пропустить
-					}
-					catentry[catIndex][catend[catIndex]] = dtentry + entryIndex;
-					catend[catIndex]++;		// пометили, что уровень заполнения увеличился
-					break;								// и пошли на следующую категорию
-				}
-			}
-		}
-	}
-	
 	printf("<JWM>\n");
 	for(catIndex=0; catIndex<CAT_MAX; catIndex++){       // по всем категориям
 		if( categorykw[catIndex][0] == NULL ) break;   // если пусто, категории кончились
-		if( categorykw[catIndex][0][0] == '_' ){ printf("<Separator/>\n"); continue; }	// если имя категории начинается с подчеркивания, это сепаратор
-		if( catend[catIndex] != 0 ){		// Вывод <Menu>, только если категория не пустая DdShurick
-			printf("<Menu label=\"%s\" icon=\"%s\" height=\"%s\">\n", categorykw[catIndex][0], categorykw[catIndex][1], categorykw[catIndex][2]);
-			for(entryIndex=0; entryIndex < catend[catIndex]; entryIndex++){
-				printf("\t<Program label=\"%s\" icon=\"%s\">%s</Program>\n", \
-						catentry[catIndex][entryIndex]->name, catentry[catIndex][entryIndex]->icon, catentry[catIndex][entryIndex]->exec);
+		if( categorykw[catIndex][0][0] == '_' ) printf("<Separator/>\n"); 	// если имя категории начинается с подчеркивания, это сепаратор
+		else
+			for( entryIndex = 0; entryIndex < entryIndexMax; entryIndex++ ){  // по всем записям из файлов
+				for( wordIndex=3; wordIndex<KW_MAX; wordIndex++ ){     // по всем ключевым словам категории
+					if( categorykw[catIndex][wordIndex] == NULL ) break;         // ключевые слова закончились, выходим из их перебора
+					if( strstr( dtentry[entryIndex].categories, categorykw[catIndex][wordIndex] ) ){
+						if( ! menuopen ){	// открыть меню, если еще не открыто
+							printf("<Menu label=\"%s\" icon=\"%s\" height=\"%s\">\n", categorykw[catIndex][0], categorykw[catIndex][1], categorykw[catIndex][2]);
+							menuopen = 1;
+						}
+						printf("\t<Program label=\"%s\" icon=\"%s\">%s</Program>\n", \
+							dtentry[entryIndex].name, dtentry[entryIndex].icon, dtentry[entryIndex].exec);
+						break;		// вывести запись, и дальше в этой категории слова проверять не надо
+					}
+				}
 			}
-			printf("</Menu>\n");
-		}
+		if( menuopen ){ printf("</Menu>\n"); menuopen=0; }	// закрыть меню, если открыто
 		for( wordIndex=0; wordIndex<4; wordIndex++ ){
 			if( categorykw[catIndex][wordIndex] == NULL ) break;
-			free( categorykw[catIndex][wordIndex] );	// таблица больше не используется, можно освободить память
+			free( categorykw[catIndex][wordIndex] );	// эта категория уже выведена, можно освободить память
 		}			// не забываем, что под слова, начиная с 3, память выделяли одним блоком
-		free(catentry[catIndex]);
-	} // вывели категории и освободили память массивов категорий
+	}
 	printf("</JWM>\n");
+
 	for( entryIndex = 0; entryIndex < entryIndexMax; entryIndex++ ){
 		free(dtentry[entryIndex].name);	// освободили созданные strdup строки
 		free(dtentry[entryIndex].icon);
@@ -202,7 +182,7 @@ int parseconfig(const char *filename){
 			tp = tmpstr;
 			while( (*tp == ' ') || (*tp == '\t') ) tp++;		// пробелы/табуляции пропустить
 			if( tp != tmpstr ){
-				categorykw[catIndex][wordIndex] = strdup(tp);
+				categorykw[catIndex][wordIndex] = strdup(tp);	// и если пропускали, строчку сделать новую
 				free(tmpstr);
 			}else categorykw[catIndex][wordIndex] = tmpstr;
 			while( (tp=strchr(categorykw[catIndex][wordIndex], ';')) ){
