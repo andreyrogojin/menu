@@ -43,7 +43,10 @@ int main(int argc, char **argv)
 	int entryIndexMax;
 	int menuopen = 0;
 
-	if( !parseconfig("/home/live/.jwm/jwmtst.conf") ) return 1;	// без конфига делать нечего
+	strncpy( buf, getenv("HOME"), 25 );
+	buf[25]=0;
+	strcat( buf, "/.jwm/jwmtst.conf" );
+	if( !parseconfig( buf ) ) return 1;	// без конфига делать нечего
 
 	for( appdir=appdirs; *appdir != NULL; appdir++){  // по всем каталогам с *.desktop файлами
 		dir = opendir(*appdir);
