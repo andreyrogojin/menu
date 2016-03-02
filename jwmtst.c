@@ -83,26 +83,30 @@ int main(int argc, char **argv)
 					if( categorykw[catIndex][wordIndex] == NULL ) break;         // ключевые слова закончились, выходим из их перебора
 					if( strstr( dtentry[entryIndex].categories, categorykw[catIndex][wordIndex] ) ){
 						if( ! menuopen ){	// открыть меню, если еще не открыто
-							printf("<Menu label=\"%s\" icon=\"%s\" height=\"%s\">\n", categorykw[catIndex][0], categorykw[catIndex][1], categorykw[catIndex][2]);
+							printf("<Menu label=\"%s\"", categorykw[catIndex][0]);
+							if( categorykw[catIndex][1] ) printf(" icon=\"%s\"", categorykw[catIndex][1]);
+							if( categorykw[catIndex][2] ) printf(" height=\"%s\"", categorykw[catIndex][2]);
+							printf(">\n");
 							menuopen = 1;
 						}
-						printf("\t<Program label=\"%s\" icon=\"%s\">%s</Program>\n", \
-							dtentry[entryIndex].name, dtentry[entryIndex].icon, dtentry[entryIndex].exec);
+						printf("\t<Program label=\"%s\"", dtentry[entryIndex].name);
+						if( dtentry[entryIndex].icon ) printf(" icon=\"%s\"", dtentry[entryIndex].icon);
+						printf(">%s</Program>\n", dtentry[entryIndex].exec);
 						break;		// вывести запись, и дальше в этой категории слова проверять не надо
 					}
 				}
 			}
 		if( menuopen ){ printf("</Menu>\n"); menuopen=0; }	// закрыть меню, если открыто
 		for( wordIndex=0; wordIndex<4; wordIndex++ ){
-			if( categorykw[catIndex][wordIndex] == NULL ) break;
-			free( categorykw[catIndex][wordIndex] );	// эта категория уже выведена, можно освободить память
+			if( categorykw[catIndex][wordIndex] != NULL )
+				free( categorykw[catIndex][wordIndex] );	// эта категория уже выведена, можно освободить память
 		}			// не забываем, что под слова, начиная с 3, память выделяли одним блоком
 	}
 	printf("</JWM>\n");
 
 	for( entryIndex = 0; entryIndex < entryIndexMax; entryIndex++ ){
 		free(dtentry[entryIndex].name);	// освободили созданные strdup строки
-		free(dtentry[entryIndex].icon);
+		if( dtentry[entryIndex].icon ) free(dtentry[entryIndex].icon);
 		free(dtentry[entryIndex].exec);
 		free(dtentry[entryIndex].categories);
 	}
