@@ -139,7 +139,8 @@ int parsefile(const char *filename, dtentryT *rezult){
 		if ( (tp=strchr(str, '\n'))!=0 ) *tp=0;
 		if ( (str[0] == '[') && (strncmp( str, "[Desktop Entry]", sizeof("[Desktop Entry]")-1 ) != 0) ) break;	// если пошла уже другая секция, дальше не смотрим
 		if ( ( (stringsearch(str, "OnlyShowIn", &tmpstr ) != 0) && ( strstr( tmpstr, "Old") == 0) ) \
-				|| ( (stringsearch(str, "NoDisplay", &tmpstr ) != 0) && ( strstr( tmpstr, "false") == 0) ) ){	// если файл не для JWM или под NoDisplay, пропустить
+				|| ( (stringsearch(str, "NoDisplay", &tmpstr ) != 0) && ( strstr( tmpstr, "false") == 0) ) \
+				|| ( (stringsearch(str, "Hidden", &tmpstr ) != 0) && ( strstr( tmpstr, "false") == 0) ) ){	// если файл не для JWM или под NoDisplay|Hidden, пропустить
 			if( rezult->name ) free( rezult->name );
 			if( rezult->icon ) free( rezult->icon );		// освободить все найденное
 			if( rezult->exec ) free( rezult->exec );
